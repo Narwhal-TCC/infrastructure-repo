@@ -1,0 +1,111 @@
+name: Narwhal Jupyter Pipeline
+
+on:
+  push:
+    branches: ["main"]
+
+env:
+  AWS_REGION: us-east-1
+  TF_VERSION: 1.9.8
+  TERRAFORM_DIR: terraform/ec2
+
+jobs:
+  provisioning:
+    runs-on: ubuntu-latest
+    outputs:
+      ec2_public_ip: ${{ steps.export.outputs.ec2_public_ip }}
+      client_bucket_name: ${{ steps.export.outputs.client_bucket_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar credenciais AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Instalar Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Criar backend Terraform
+        run: |
+          cat > ${{ env.TERRAFORM_DIR }}/backend.hcl <<EOF
+          bucket = "${{ secrets.STATE_BUCKET_NAME }}"
+          key    = "terraform/narwhal-jupyter/state.tfstate"
+          region = "${{ env.AWS_REGION }}"
+          EOF
+
+      - name: Terraform Init e Apply
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform init -backend-config=backend.hcl
+          terraform apply -auto-approve
+
+      - name: Exportar outputs do Terraform
+        id: export
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          echo "ec2_public_ip=$(terraform output -raw ec2_public_ip)" >> $GITHUB_OUTPUT
+          echo "client_bucket_name=$(terraform output -raw client_bucket_name)" >> $GITHUB_OUTPUT
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: provisioning
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar credenciais AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Instalar dependencias
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq python3 python3-pip
+          pip3 install --quiet ansible boto3
+
+      - name: Configurar chave SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/narwhal-key.pem
+          chmod 400 ~/.ssh/narwhal-key.pem
+
+      - name: Criar inventory Ansible
+        run: |
+          cat > ansible/inventory.ini <<EOF
+          [ec2]
+          ${{ needs.provisioning.outputs.ec2_public_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/narwhal-key.pem
+          EOF
+
+      - name: Criar .env
+        run: |
+          cat > ansible/.env <<EOF
+          AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN=${{ secrets.AWS_SESSION_TOKEN }}
+          S3_CLIENT=${{ needs.provisioning.outputs.client_bucket_name }}
+          EOF
+
+      - name: Aguardar EC2 ficar disponível
+        run: |
+          echo "Waiting for SSH on ${{ needs.provisioning.outputs.ec2_public_ip }}..."
+          timeout 120 bash -c \
+            'until nc -z ${{ needs.provisioning.outputs.ec2_public_ip }} 22; do sleep 5; done'
+
+      - name: Configurar EC2 com Ansible
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+          ANSIBLE_SSH_RETRIES: "5"
+        run: |
+          cd ansible
+          ansible-playbook -i inventory.ini setup.yml
