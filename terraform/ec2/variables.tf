@@ -15,3 +15,8 @@ variable "bucket_name" {
   type        = string
   default     = "narwhal"
 }
+
+variable "key_name" {
+  description = "Name of an existing EC2 Key Pair for SSH access"
+  type        = string
+}

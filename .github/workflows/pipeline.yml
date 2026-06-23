@@ -44,7 +44,11 @@ jobs:
         run: |
           cd ${{ env.TERRAFORM_DIR }}
           terraform init -backend-config=backend.hcl
-          terraform apply -auto-approve
+          terraform apply -auto-approve \
+            -var="aws_region=${{ env.AWS_REGION }}" \
+            -var="ubuntu_ami=${{ secrets.UBUNTU_AMI }}" \
+            -var="key_name=${{ secrets.EC2_KEY_NAME }}" \
+            -var="bucket_name=narwhal"
 
       - name: Exportar outputs do Terraform
         id: export

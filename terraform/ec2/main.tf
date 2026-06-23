@@ -52,7 +52,7 @@ resource "aws_s3_bucket_versioning" "versioning-client" {
 resource "aws_instance" "jupyter" {
   ami                    = var.ubuntu_ami
   instance_type          = "t3.medium"
-  key_name               = aws_key_pair.generated_key.key_name
+  key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.ssh_sg.id]
 
   tags = {
@@ -60,15 +60,6 @@ resource "aws_instance" "jupyter" {
   }
 }
 
-resource "tls_private_key" "generated_key" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
-resource "aws_key_pair" "generated_key" {
-  key_name   = "narwhal-jupyter-key"
-  public_key = tls_private_key.generated_key.public_key_openssh
-}
 
 resource "aws_ebs_volume" "narwhal_data" {
   availability_zone = aws_instance.jupyter.availability_zone
@@ -82,8 +73,8 @@ resource "aws_ebs_volume" "narwhal_data" {
 
 resource "aws_volume_attachment" "jupyter_data_attach" {
   device_name = "/dev/sdf"
-  volume_id   = aws_ebs_volume.jupyter.id
-  instance_id = aws_instance.jupyter.id
+  volume_id   = aws_ebs_volume.narwhal_data.id
+  instance_id = aws_instance.narwhal_data.id
 }
 
 output "client_bucket_name" {
@@ -100,9 +91,4 @@ output "client_bucket_arn" {
 
 output "ssh_sg_id" {
   value = aws_security_group.ssh_sg.id
-}
-
-output "generated_private_key" {
-  value     = tls_private_key.generated_key.private_key_pem
-  sensitive = true
 }
