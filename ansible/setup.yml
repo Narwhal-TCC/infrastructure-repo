@@ -2,13 +2,20 @@
 - hosts: ec2
   become: yes
   tasks:
+    - name: Atualizar pacotes
+      apt:
+        update_cache: yes
+        upgrade: dist
+
     - name: Instalar pacotes básicos
-      yum:
+      apt:
         name:
-          - docker
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
           - python3-pip
         state: present
-
     - name: Instalar módulo Docker do Python
       pip:
         name: docker
