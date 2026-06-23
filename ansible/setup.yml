@@ -16,12 +16,12 @@
           - lsb-release
           - python3-pip
         state: present
+
     - name: Instalar módulo Docker do Python
       pip:
         name: docker
         executable: pip3
-        extra_args: "--ignore-installed"
-
+        extra_args: "--ignore-installed --break-system-packages"
     - name: Habilitar e iniciar o serviço Docker
       systemd:
         name: docker
