@@ -81,10 +81,12 @@ jobs:
       - name: Configurar chave SSH
         run: |
           mkdir -p ~/.ssh
-          cat <<'EOF' > /home/runner/.ssh/narwhal-key.pem
-          ${{ secrets.EC2_SSH_KEY }}
-          EOF
+          echo "${{ secrets.EC2_SSH_KEY }}" > /home/runner/.ssh/narwhal-key.pem
           chmod 400 /home/runner/.ssh/narwhal-key.pem
+          echo "=== Raw content ==="
+          cat -A /home/runner/.ssh/narwhal-key.pem | head -5
+          echo "=== Line count ==="
+          wc -l /home/runner/.ssh/narwhal-key.pem
 
       - name: Criar inventory Ansible
         run: |
@@ -101,22 +103,6 @@ jobs:
           AWS_SESSION_TOKEN=${{ secrets.AWS_SESSION_TOKEN }}
           S3_CLIENT=${{ needs.provisioning.outputs.client_bucket_name }}
           EOF
-
-      - name: Debug SSH connection
-        run: |
-          echo "=== Key file ===" 
-          ls -la /home/runner/.ssh/
-          echo "=== Key fingerprint ==="
-          ssh-keygen -l -f /home/runner/.ssh/narwhal-key.pem
-          echo "=== Inventory ==="
-          cat ansible/inventory.ini
-          echo "=== Manual SSH test ==="
-          ssh -i /home/runner/.ssh/narwhal-key.pem \
-              -o StrictHostKeyChecking=no \
-              -o ConnectTimeout=10 \
-              -v \
-              ubuntu@${{ needs.provisioning.outputs.ec2_public_ip }} "echo connected"
-
 
       - name: Aguardar EC2 ficar disponível
         run: |
