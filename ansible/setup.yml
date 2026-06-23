@@ -28,7 +28,7 @@
 
     - name: Copiar Dockerfile e código da aplicação
       copy:
-        src: "{{ playbook_dir }}/../lab/"
+        src: "{{ playbook_dir }}/../docker/"
         dest: /opt/lab/
         owner: root
         group: root
