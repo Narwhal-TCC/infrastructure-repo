@@ -74,7 +74,7 @@ resource "aws_ebs_volume" "narwhal_data" {
 resource "aws_volume_attachment" "jupyter_data_attach" {
   device_name = "/dev/sdf"
   volume_id   = aws_ebs_volume.narwhal_data.id
-  instance_id = aws_instance.narwhal_data.id
+  instance_id = aws_instance.jupyter.id
 }
 
 output "client_bucket_name" {
