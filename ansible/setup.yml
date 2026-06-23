@@ -17,11 +17,33 @@
           - python3-pip
         state: present
 
+    - name: Adicionar chave GPG oficial do Docker
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Adicionar repositório do Docker
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
+        state: present
+        update_cache: yes
+
+    - name: Instalar Docker Engine
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+
     - name: Instalar módulo Docker do Python
       pip:
         name: docker
         executable: pip3
         extra_args: "--ignore-installed --break-system-packages"
+
     - name: Habilitar e iniciar o serviço Docker
       systemd:
         name: docker
@@ -66,4 +88,4 @@
         ports:
           - "8888:8888"
         volumes:
-          - /mnt/data:/mnt/data
+          - /mnt/data:/mnt/data         - /mnt/data:/mnt/data
