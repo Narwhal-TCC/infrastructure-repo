@@ -81,9 +81,10 @@ jobs:
       - name: Configurar chave SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/narwhal-key.pem
-          chmod 400 ~/.ssh/narwhal-key.pem
-          ssh-keyscan -H ${{ needs.provisioning.outputs.ec2_public_ip }} >> ~/.ssh/known_hosts
+          cat <<'EOF' > /home/runner/.ssh/narwhal-key.pem
+          ${{ secrets.EC2_SSH_KEY }}
+          EOF
+          chmod 400 /home/runner/.ssh/narwhal-key.pem
 
       - name: Criar inventory Ansible
         run: |
