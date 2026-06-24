@@ -19,7 +19,9 @@ RUN apt-get update && apt-get install -y \
 RUN python3 -m venv $VENV_PATH
 
 # Clone your work repo
-RUN git clone https://github.com/Narwhal-TCC/data-science-notebooks.git /opt/lab
+RUN git clone https://github.com/Narwhal-TCC/data-science-notebooks.git /opt/lab && \
+    cd /opt/lab && \
+    pip install -r requirements.txt
 
 # Clone component repo and install it
 RUN git clone https://github.com/Narwhal-TCC/sonar-feature-extractor.git /opt/component && \
