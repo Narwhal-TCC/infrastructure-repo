@@ -17,14 +17,22 @@
           - python3-pip
         state: present
 
-    - name: Adicionar chave GPG oficial do Docker
-      apt_key:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        state: present
+    - name: Criar diretório para keyrings
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: 0755
+
+    - name: Baixar e adicionar chave GPG do Docker
+      shell: |
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+        gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+      args:
+        creates: /etc/apt/keyrings/docker.gpg
 
     - name: Adicionar repositório do Docker
       apt_repository:
-        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
         state: present
         update_cache: yes
 
@@ -88,4 +96,4 @@
         ports:
           - "8888:8888"
         volumes:
-          - /mnt/data:/mnt/data         - /mnt/data:/mnt/data
+          - /mnt/data:/mnt/data
