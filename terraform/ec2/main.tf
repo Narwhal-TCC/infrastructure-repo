@@ -63,7 +63,6 @@ resource "aws_instance" "jupyter" {
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.ssh_sg.id]
   root_block_device {
-    availability_zone = aws_instance.jupyter.availability_zone
     volume_size = 15 
     volume_type = "gp3"
     encrypted   = true
