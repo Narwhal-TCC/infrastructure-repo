@@ -26,6 +26,14 @@ resource "aws_security_group" "ssh_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    description = "MLflow"
+    from_port   = 5000
+    to_port     = 5000
+    protocol    = "tcp"
+    cidr_blocks = [var.allowed_cidr]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -54,6 +62,12 @@ resource "aws_instance" "jupyter" {
   instance_type          = "t3.medium"
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.ssh_sg.id]
+  root_block_device {
+    availability_zone = aws_instance.jupyter.availability_zone
+    volume_size = 15 
+    volume_type = "gp3"
+    encrypted   = true
+  }
 
   tags = {
     Name = "narwhal-jupyter-ec2"
