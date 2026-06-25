@@ -31,7 +31,7 @@ resource "aws_security_group" "ssh_sg" {
     from_port   = 5000
     to_port     = 5000
     protocol    = "tcp"
-    cidr_blocks = [var.allowed_cidr]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
